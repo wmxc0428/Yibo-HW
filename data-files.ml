@@ -127,32 +127,19 @@ fun red (APP(LAM(id,e1),e2)) = subs e2 id e1;
  m(v) = undefined *)
 
 
+fun listTail [] = [] |
+    listTail (h::[]) = [] |
+    listTail (h::t) = t ;
 
 fun mreduce (ID id) =  [(ID id)] | 
     mreduce (LAM(id,e)) = (addlam id (mreduce e)) |
-    mreduce (APP(e1,e2)) = (let val eo=[(APP(e1,e2))]
-				val l1 = (mreduce e1)
+    mreduce (APP(e1,e2)) = (let val l1 = (mreduce e1)
 				val l2 = (mreduce e2)
-				val l3 = (addbackapp l1 e2)			
-				val l4 = (addfrontapp (List.last l1) l2)		
+				val l3 = (addbackapp l1 e2)				
+				val l4 = (addfrontapp (List.last l1) l2)
 				val l5 = (List.last l4)
-				val l6 =  if (is_redex l5) then (mreduce (red l5)) else [l5]
-				val result= if (is_redex l5) then
-								
-								
-								if List.last(l3)=List.hd(l4) then 
-									if List.last(l4)=List.hd(l6) then
-										eo @ l6
-									else
-										eo @ l4 @ l6
-								else
-									if List.last(l4)=List.hd(l6) then
-										eo @ l3 @ l4
-									else
-										eo @ l3 @ l4 @ l6
-							else
-								 l6
-			    in  result
+				val l6 =  if (is_redex l5) then (mreduce (red l5)) else [] (*was [l5]*)
+			    in l3 @ (listTail l4) @ l6
 			    end);
 
 
@@ -174,8 +161,12 @@ fun isApp (APP(e1,e2)) = true |
 	isApp _ = false;
 	
 fun getFirsteFromApp (ID id) = (ID id) |
-getFirsteFromApp (LAM(id,e)) = (LAM(id,e)) |
-getFirsteFromApp (APP(e1,e2)) = getFirsteFromApp(e1);
+	getFirsteFromApp (LAM(id,e)) = (LAM(id,e)) |
+	getFirsteFromApp (APP(e1,e2)) = e1;
+	
+fun getSeceFromApp (ID id) = (ID id) |
+	getSeceFromApp (LAM(id,e)) = (LAM(id,e)) |
+	getSeceFromApp (APP(e1,e2)) = e1;
 	
 (*my own version of one_loreduce, well , it is the same as given, accidentally*)
 fun one_lreduce (ID id) = (ID id)|
@@ -185,9 +176,9 @@ fun one_lreduce (ID id) = (ID id)|
 									val e3= (red (APP(e1,e2))) 
 								    val result= if eo=e3 then
 													eo
-												else if (getFirsteFromApp e3)=(eo) then
+												(*else if (getFirsteFromApp e3)=(eo) then
 													eo
-													
+													*)
 												else
 													e3
 								in
@@ -205,56 +196,74 @@ fun one_lreduce (ID id) = (ID id)|
   this function terminates if the left most beta reduction does not terminate and meets repeated lines
 *)
 
+fun expression_size (ID id) = 1 |
+	expression_size (LAM(id,e)) = (1 + (expression_size e))|
+	expression_size (APP(e1,e2)) = (expression_size e1)+(expression_size e2);
 
-fun lreduce (ID id) =  [(ID id)] |
-    lreduce (LAM(id,e)) = (addlam id (lreduce e)) |
-    lreduce (APP(e1,e2)) = (let val eo = (APP(e1,e2))
-								val l1=[eo]
-								val l2= if (is_redex eo) then 
-											let val e3=(one_lreduce eo) in
-												if (is_inlist e3 l1) then
-													(*raise Infinite_loop*)
-													[]
-												else if (eo)=(e3) then
-													[]
-												else if (getFirsteFromApp e3)=(e1) then
-													[]
-												else
-													(lreduce e3)
-											end
-										else if has_redex e1 then 
-													let val e3=(one_lreduce e1)
-														val e4=(APP(e3, e2))
-														val e5=(getFirsteFromApp e3)
-														in
-															if (is_inlist e4 l1) then
-																(*raise Infinite_loop*)
-																[]
-															else if (e5=e1) then
-																[]
-															else
-																(lreduce e4)
-													end
-											else if has_redex e2 then
-												let val e3=(one_lreduce e2)
-														val e4=(APP(e1, e3))
-														val e5=(getFirsteFromApp e3)
-														in
-															if (is_inlist e4 l1) then
-																(*raise Infinite_loop*)
-																[]
-															else if (e5=e2) then
-																(*raise Infinite_loop*)
-																[]
-															else
-																(lreduce e4)
-													end
-											else
+fun lreduce3 i elist (ID id) =  [(ID id)] |
+    lreduce3 i elist (LAM(id,e)) = (addlam id (lreduce3 i elist e)) |
+    lreduce3 i elist (APP(e1,e2)) = (let val eo = (APP(e1,e2))
+									   val new_i=(i-1)
+									   val l1=[eo]
+									   val new_elist=(elist @ l1)
+									   val l2=  if i<=0 then 
+										[]
+									   else
+									   if (is_redex eo) then 
+										   let val e3=(one_lreduce eo) in
+											if (is_inlist e3 elist) then
 												[]
+											
+											else if(is_inlist eo elist) then
+												[]
+												
+											else if (is_inlist (getFirsteFromApp e3) elist) then	
+												[]
+											else if (is_inlist (getSeceFromApp e3) elist) then	
+												[]	
+											else
+												(lreduce3 new_i new_elist e3)
+										    end
+									else if has_redex e1 then 
+										let val e3=(one_lreduce e1)
+											val e4=(APP(e3, e2))
+											val new_elist=(elist @ l1 )
+										in
+											if (is_inlist e3 elist) then
+												[]
+											else if(is_inlist eo elist) then
+												[]
+											else if (is_inlist e1 elist) then	
+												[]
+											else
+											(lreduce3 new_i new_elist e4)
+										end
+									else if has_redex e2 then
+										let val e3=(one_lreduce e2)
+											val e4=(APP(e1, e3))
+											val new_elist=(elist @ l1)
+										in
+											if (is_inlist e3 elist) then
+												[]
+											else if(is_inlist eo elist) then
+												[]
+											else if (is_inlist e2 elist) then	
+												[]
+											else
+											(lreduce3 new_i new_elist e4)
+											end
+									else
+										[]
 								in
 									l1 @ l2
 								end);
-
+    
+    
+fun lreduce e = let val size=(expression_size e)
+					val result= lreduce3 size [] e
+				in
+					result
+				end;
 
 fun one_rireduce (ID id) = (ID id)|
     one_rireduce (LAM(id,e)) = LAM(id, (one_rireduce e))|
@@ -285,7 +294,7 @@ fun printlreduce e = (let val tmp =  (lreduce e)
 				      therefore, it is a infinite loop of doing beta reduction.
 				      Else it is 
 				     *)
-					(print "step count= INFINITE LOOP, THIS LAMDA EXPRESSION DOES NOT HAVE A NORMAL FORM!!";print "\n";(printlistreduce tmp)) 
+					(print "Found at step ";print (Int.toString(count)); print "\nINFINITE LOOP, THIS LAMDA EXPRESSION DOES NOT HAVE A NORMAL FORM!!";print "\n";(printlistreduce tmp)) 
 		        else
 					(print "step count=";print (Int.toString(count));print "\n";(printlistreduce tmp)) 
 			
@@ -333,6 +342,11 @@ val t11= (APP((APP(LAM("x",APP(LAM("y",vy),APP(vx,vx))),LAM("x",APP(vx,vx)))),vz
 val t12s=(LAM("x",APP(APP(vx,vx),vx)))
 val t12= (APP(t12s,t12s))
 val t13= (APP(t8,t8));
+val t14= (APP(t1,t10));
+val t15= (APP(t8,t10));
+val t16= (APP(t8,t12s));
+val t17= (APP(APP((APP((APP(t1,t1)),t1)),t1),t1));
+
 (*Note that printmreduce t7; gives:
 (((\x.(\y.(\z.((x z) (y z))))) (\x.x)) (\x.x))-->
 (((\x.(\y.(\z.((x z) (y z))))) (\x.x)) (\x.x))-->
