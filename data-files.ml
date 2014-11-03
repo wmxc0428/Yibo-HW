@@ -198,7 +198,7 @@ fun one_lreduce (ID id) = (ID id)|
 
 fun expression_size (ID id) = 1 |
 	expression_size (LAM(id,e)) = (1 + (expression_size e))|
-	expression_size (APP(e1,e2)) = (expression_size e1)+(expression_size e2);
+	expression_size (APP(e1,e2)) =1+ (expression_size e1)+(expression_size e2);
 
 fun lreduce3 i elist (ID id) =  [(ID id)] |
     lreduce3 i elist (LAM(id,e)) = (addlam id (lreduce3 i elist e)) |
