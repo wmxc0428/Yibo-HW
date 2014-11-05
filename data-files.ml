@@ -161,7 +161,7 @@ fun getSeceFromApp (ID id) = (ID id) |
  m(v) = undefined *)
 
 
-
+(* i is the step limitation that is calculated from the lamda expression size*)
 fun mreduce2 i (ID id) =  [(ID id)] | 
     mreduce2 i (LAM(id,e)) = (addlam id (mreduce2 i e)) |
     mreduce2 i (APP(e1,e2)) = 
@@ -183,7 +183,11 @@ fun mreduce2 i (ID id) =  [(ID id)] |
 										val l5 = (List.last l4)
 										(* the expression APP(e1,e2) is being reduced for (c1+c2-1) steps, therefore steps number left is (i-(c1+c2-1)) *)
 										val l6 =  if (is_redex l5) then (mreduce2 (i-(c1+c2-1)) (red l5)) else [] (*was [l5]*)
-									in l3 @ (List.tl l4) @ l6
+									in 
+										(*converge function does not change results that are not a inifinite loop
+										
+										*)
+										converge (l3 @ (List.tl l4) @ l6)
 									end)
 								else
 									[(APP(e1,e2))]
@@ -203,6 +207,7 @@ terms and then prints this list separating intermediary terms with -->*)
 one way of doing this is to use converge function to ignore repeated lines.
 fun printmreduce e = (let val tmp = converge (mreduce e)  but I managed to find the problem in orginal function*)
 fun printmreduce e = (let val tmp =  (mreduce e)
+						  val count=count_list tmp
 		        in 
 			
 				if has_redex (List.last tmp) then
