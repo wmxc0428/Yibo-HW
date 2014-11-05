@@ -157,9 +157,9 @@ fun Ilreduce (IID id) =  [(IID id)] |
 fun Irireduce (IID id) =  [(IID id)] |
     Irireduce (ILAM(id,e)) = (Iaddlam id (Irireduce e)) |
     Irireduce (IAPP(e1,e2)) = (let val l1 = (Irireduce e2)
-				val e3 = (List.last l1)
+								val e3 = (List.last l1)
                                 val l2 = (Iaddfrontapp e1 l1)
-				val e4 = (IAPP(e1,e3))
+								val e4 = (IAPP(e1,e3))
                                 val l3 =  if (Iis_redex e4) then (Irireduce (Ired e4)) else 
 					  if Iis_var(e1) then [e4] else
 					      (Irireduce (IAPP(Ione_rireduce e1, e3)))
@@ -208,3 +208,11 @@ val It7 = I t7;
 val It8 = I t8;
 val It9 = I t9;
 
+
+val a= parse "\\x.xxxxxxxx";
+val b= parse "\\x.xxxxx";
+val c=parse "\\x.x";
+val d=parse "x";
+val e=parse "\\x.xxx";
+val k=APP(a,APP(b,c));
+val l=APP(k,APP(e,d));

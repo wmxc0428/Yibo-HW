@@ -134,9 +134,9 @@ fun  one_rireduce (ID id) = (ID id)|
 fun rireduce (ID id) =  [(ID id)] |
     rireduce (LAM(id,e)) = (addlam id (rireduce e)) |
     rireduce (APP(e1,e2)) = (let val l1 = (rireduce e2)
-				val e3 = (List.last l1)
+								val e3 = (List.last l1)
                                 val l2 = (addfrontapp e1 l1)
-				val e4 = (APP(e1,e3))
+								val e4 = (APP(e1,e3))
                                 val l3 =  if (is_redex e4) then (rireduce (red e4)) else 
 					  if is_var(e1) then [e4] else
 					      (rireduce (APP(one_rireduce e1, e3)))
