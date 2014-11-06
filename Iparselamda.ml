@@ -1,8 +1,5 @@
 (*test function*)
 exception ERROR_CHAR;
-use("Ifile.ml");
-use("parselamda.ml");
-
 
 fun head str = String.substring(str,0,1);
 fun tail str = if String.size(str)>1 then String.extract(str,1,NONE)
@@ -26,18 +23,7 @@ fun Ibracketlength i str = (let val h = (head str)
 											  0
 											else
 											    raise ERROR_CHAR
-										 else (*if String.size(str)=1 then
-											if i>1 then
-											  raise ERROR_CHAR
-											else if i=1 then
-											    if h=">" then
-													1
-												else
-													raise ERROR_CHAR
-											else
-											 
-											 1
-										else*)
+										 else 
 											0
 							  
 						  in 

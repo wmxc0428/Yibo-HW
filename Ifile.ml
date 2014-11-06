@@ -1,9 +1,10 @@
-use("data-files.ml");
-use("parselamda.ml");
+
 
 
 datatype ILEXP =  APPon of ILEXP * ILEXP | ILAM of string *  ILEXP |  IID of string;
-
+use("data-files.ml");
+use("parselamda.ml");
+use("Iparselamda.ml");
 
 fun O (IID v) = (ID v) |
     O (ILAM(str,e)) = (LAM(str, (O e))) |
@@ -249,7 +250,48 @@ fun Ione_lreduce (IID id) = (IID id)|
                                else
                                 (APPon(e1,e2));
 
-
+fun Ilreduce4 i (IID id) =  [(IID id)] |
+    Ilreduce4 i (ILAM(id,e)) = (Iaddlam id (Ilreduce4 i e)) |
+    Ilreduce4 i (APPon(e1,e2)) = (
+								if i>0 then
+								let 
+									
+									val eo = (APPon(e1,e2))
+									val l1=[eo]
+									val l2=if (Iis_redex eo) then
+										let 
+											
+											val new_i = i-1
+											
+										in
+											(Ilreduce4 new_i (Ione_lreduce eo))
+										end
+									else if (Ihas_redex e2) then
+										let val new_i= (i-1)
+										in
+											(Ilreduce4 new_i (APPon( e1,Ione_lreduce e2)))
+										end
+										
+									else if (Ihas_redex e1) then
+										let val new_i= (i-1)
+										in
+											(Ilreduce4 new_i (APPon(Ione_lreduce e1, e2)))
+										end
+										
+									else
+										[]
+								in
+									(*the converge function used here does not affect the result of expressions that have a normal form
+									  unless the original expression is reduced into a loop whose repeated lines will be ignored.
+									*)
+									converge(l1 @ l2)
+									
+								end
+								else
+								[]
+								);
+								
+(*
 fun Ilreduce3 i elist (IID id) =  [(IID id)] |
     Ilreduce3 i elist (ILAM(id,e)) = (Iaddlam id (Ilreduce3 i elist e)) |
     Ilreduce3 i elist (APPon(e1,e2)) = (let val eo = (APPon(e1,e2))
@@ -302,9 +344,10 @@ fun Ilreduce3 i elist (IID id) =  [(IID id)] |
 								in
 									l1 @ l2
 								end);
-    
+*)
+
 fun Ilreduce e = let val size=(Iexpression_size e)
-					val result= Ilreduce3 size [] e
+					val result= Ilreduce4 size e
 				in
 					result
 				end;
