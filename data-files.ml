@@ -132,7 +132,18 @@ fun isApp (APP(e1,e2)) = true |
 
 fun	expression_size2 boundidlist (ID id) = if boundidlist=[] then 1 else if is_inlist (ID id) boundidlist then 1 else 0 |
     expression_size2 boundidlist (LAM(id,e)) = (expression_size2 (boundidlist @ [(ID id) ]) e) |
-    expression_size2 boundidlist (APP(e1,e2))=1 + (expression_size2 boundidlist e1)*(expression_size2 boundidlist e2);
+    expression_size2 boundidlist (APP(e1,e2))=  (* the right part expression is substituded into left part
+												so the size of application should be the multiplication of size(left) and size(right)
+												however if right part has no bounded variable , it could size(right)=0 therefore
+												we have to make sure the size of right part is at least 1
+												*)
+												let val left=(expression_size2 boundidlist e1)
+													val right=(expression_size2 boundidlist e2)
+													val right=if right=0 then 1 else right
+												in
+												1 + left*right
+												end
+												;
 
 fun expression_size (ID id) = 1 |
 	expression_size (LAM(id,e)) = (0 + (expression_size e))|

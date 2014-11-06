@@ -104,23 +104,73 @@ fun Ired (APPon(e2,ILAM(id,e1))) = Isubs e2 id e1;
 
 fun	Iexpression_size2 boundidlist (IID id) = if boundidlist=[] then 1 else if is_inlist (IID id) boundidlist then 1 else 0 |
     Iexpression_size2 boundidlist (ILAM(id,e)) = (Iexpression_size2 (boundidlist @ [(IID id) ]) e) |
-    Iexpression_size2 boundidlist (APPon(e1,e2))=1 + (Iexpression_size2 boundidlist e1)*(Iexpression_size2 boundidlist e2);
-
- 
+    Iexpression_size2 boundidlist (APPon(e1,e2))= (* the LEFT part expression is substituded into RIGHT part
+												so the size of application should be the multiplication of size(left) and size(right)
+												however if LEFT part has no bounded variable , it could size(LEFT)=0 therefore
+												we have to make sure the size of LEFT part is at least 1
+												*)
+												let val left=(Iexpression_size2 boundidlist e1)
+													val right=(Iexpression_size2 boundidlist e2)
+													val left=if left=0 then 1 else left
+												in
+												1 + left*right
+												end
+												;
 (* MID REDUCE*)
-fun Imreduce (IID id) =  [(IID id)] | 
-    Imreduce (ILAM(id,e)) = (Iaddlam id (Imreduce e)) |
-    Imreduce (APPon(e1,e2)) = (let val l1 = (Imreduce e2)
-				val l2 = (Imreduce e1)
-				val l3 = (Iaddbackapp l2 e1)				
-				val l4 = (Iaddfrontapp (List.last l2) l1)
-				val l5 = (List.last l4)
-				val l6 =  if (Iis_redex l5) then (Imreduce (Ired l5)) else []
-			    in l3 @ (List.tl l4) @ l6
-			    end);
+fun Imreduce2 i (IID id) =  [(IID id)] | 
+    Imreduce2 i (ILAM(id,e)) = (Iaddlam id (Imreduce2 i e)) |
+    Imreduce2 i (APPon(e1,e2)) = 
+								if i>0 then
+									(let 
+										val s1=Real.fromInt(Iexpression_size2 [] e2)
+										val s2=Real.fromInt(Iexpression_size2 [] e1)
+										val size1=if s1>0.0 then s1 else 1.0
+										val size2=if s2>0.0 then s2 else 1.0
+										val i1= floor( Real.fromInt(i-1)/size1)
+										val i2= floor( Real.fromInt(i-1)/size2)
+										
+										val l1 = (Imreduce2 (i1) e1)
+										val l2 = (Imreduce2 (i2) e2)
+										val l3 = (Iaddbackapp l2 e1)				
+										val l4 = (Iaddfrontapp (List.last l2) l1)
+										val c1= count_list l1
+										val c2= count_list l2
+										val l5 = (List.last l4)
+										(* the expression APP(e1,e2) is being reduced for (c1+c2-1) steps, therefore steps number left is (i-(c1+c2-1)) *)
+										val l6 =  if (Iis_redex l5) then (Imreduce2 (i-(c1+c2-1)) (Ired l5)) else [] (*was [l5]*)
+									in 
+										(*converge function does not change results that are not a inifinite loop
+										
+										*)
+										converge (l3 @ (List.tl l4) @ l6)
+									end)
+								else
+									[(APPon(e1,e2))]
+									;
+
+
+
+fun Imreduce e = let val size=(Iexpression_size2 [] e)
+					 val result=(Imreduce2 size e)
+				in
+					result
+				end;
 (*  -LE         ----------------------------------------------------------------------------------     *)
 fun Iprintmreduce e = (let val tmp =  (Imreduce e)
-		      in Iprintlistreduce tmp end);
+						   val count = count_list tmp
+						in 
+							if Ihas_redex (List.last tmp) then
+								
+							(*if the expression from the right most has a redex, it means it terminated earlier due to repeated lines or expanding lines
+							  therefore, it is a infinite loop of doing right most beta reduction, this meas it doea not weakly terminate.
+							  Else it is the normal form
+							 *)
+								(Iprintlistreduce tmp;print "Found at step ";print (Int.toString(count)); print "\nINFINITE LOOP, THIS LAMDA EXPRESSION DOES NOT WEAKLY TERMINATE!!";(print "\n")) 
+							else
+								(Iprintlistreduce tmp;print "step count=";print (Int.toString(count));(print "\n")) 
+						
+						  end);
+
 
 (* RIGHT FIRST REDUCE *)
 
@@ -165,11 +215,12 @@ fun printIrireduce e = (let val tmp =  (Irireduce e)
 						in 
 						
 							if Ihas_redex (List.last tmp) then
-								(*if the expression from the lreduce has a redex, it means it terminated earlier due to repeated lines or expanding lines
-								  therefore, it is a infinite loop of doing beta reduction.
-								  Else it is the normal form
-								 *)
-								(Iprintlistreduce tmp;print "Found at step ";print (Int.toString(count)); print "\nINFINITE LOOP, THIS LAMDA EXPRESSION DOES NOT HAVE A NORMAL FORM!!";(print "\n")) 
+								
+							(*if the expression from the right most has a redex, it means it terminated earlier due to repeated lines or expanding lines
+							  therefore, it is a infinite loop of doing right most beta reduction, this meas it doea not weakly terminate.
+							  Else it is the normal form
+							 *)
+								(Iprintlistreduce tmp;print "Found at step ";print (Int.toString(count)); print "\nINFINITE LOOP, THIS LAMDA EXPRESSION DOES NOT WEAKLY TERMINATE!!";(print "\n")) 
 							else
 								(Iprintlistreduce tmp;print "step count=";print (Int.toString(count));(print "\n")) 
 						
@@ -296,8 +347,3 @@ val It14 = I t14;
 val It15 = I t15;
 val It16 = I t16;
 val It17 = I t17;
-val aa= parse "(\\x.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)";
-val bb= parse "(\\x.xxxxxxxxxxxxxxxxx)(\\x.x)";
-val cc= (APP(aa,bb));
-val dd= (APP(cc,vx));
-val ee=(APP(dd,cc));
